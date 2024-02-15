@@ -25,6 +25,7 @@ function UniformsCache() {
 				case 'DirectionalLight':
 					uniforms = {
 						direction: new Vector3(),
+						altDirection: new Vector3(),
 						color: new Color()
 					};
 					break;
@@ -33,6 +34,8 @@ function UniformsCache() {
 					uniforms = {
 						position: new Vector3(),
 						direction: new Vector3(),
+						altPosition: new Vector3(),
+						altDirection: new Vector3(),
 						color: new Color(),
 						distance: 0,
 						coneCos: 0,
@@ -44,6 +47,7 @@ function UniformsCache() {
 				case 'PointLight':
 					uniforms = {
 						position: new Vector3(),
+						altPosition: new Vector3(),
 						color: new Color(),
 						distance: 0,
 						decay: 0
@@ -53,6 +57,7 @@ function UniformsCache() {
 				case 'HemisphereLight':
 					uniforms = {
 						direction: new Vector3(),
+						altDirection: new Vector3(),
 						skyColor: new Color(),
 						groundColor: new Color()
 					};
@@ -62,6 +67,7 @@ function UniformsCache() {
 					uniforms = {
 						color: new Color(),
 						position: new Vector3(),
+						altPosition: new Vector3(),
 						halfWidth: new Vector3(),
 						halfHeight: new Vector3()
 					};
@@ -494,7 +500,7 @@ function WebGLLights( extensions, capabilities ) {
 
 	}
 
-	function setupView( lights, camera ) {
+	function setupView( lights, _camera ) {
 
 		let directionalLength = 0;
 		let pointLength = 0;
@@ -502,7 +508,11 @@ function WebGLLights( extensions, capabilities ) {
 		let rectAreaLength = 0;
 		let hemiLength = 0;
 
+		const camera = _camera.cameras ? _camera.cameras[ 0 ] : _camera;
+		const altCamera = _camera.cameras ? _camera.cameras[ 1 ] : null;
+
 		const viewMatrix = camera.matrixWorldInverse;
+		const altMatrix = altCamera ? altCamera.matrixWorldInverse : null;
 
 		for ( let i = 0, l = lights.length; i < l; i ++ ) {
 
@@ -516,6 +526,14 @@ function WebGLLights( extensions, capabilities ) {
 				vector3.setFromMatrixPosition( light.target.matrixWorld );
 				uniforms.direction.sub( vector3 );
 				uniforms.direction.transformDirection( viewMatrix );
+
+				if ( altCamera ) {
+
+					uniforms.altDirection.setFromMatrixPosition( light.matrixWorld );
+					uniforms.altDirection.sub( vector3 );
+					uniforms.altDirection.transformDirection( altMatrix );
+
+				}
 
 				directionalLength ++;
 
@@ -531,6 +549,17 @@ function WebGLLights( extensions, capabilities ) {
 				uniforms.direction.sub( vector3 );
 				uniforms.direction.transformDirection( viewMatrix );
 
+				if ( altCamera ) {
+
+					uniforms.altPosition.setFromMatrixPosition( light.matrixWorld );
+					uniforms.altPosition.applyMatrix4( altMatrix );
+
+					uniforms.altDirection.setFromMatrixPosition( light.matrixWorld );
+					uniforms.altDirection.sub( vector3 );
+					uniforms.altDirection.transformDirection( altMatrix );
+
+				}
+
 				spotLength ++;
 
 			} else if ( light.isRectAreaLight ) {
@@ -539,6 +568,13 @@ function WebGLLights( extensions, capabilities ) {
 
 				uniforms.position.setFromMatrixPosition( light.matrixWorld );
 				uniforms.position.applyMatrix4( viewMatrix );
+
+				if ( altCamera ) {
+
+					uniforms.altPosition.setFromMatrixPosition( light.matrixWorld );
+					uniforms.altPosition.applyMatrix4( altMatrix );
+
+				}
 
 				// extract local rotation of light to derive width/height half vectors
 				matrix42.identity();
@@ -561,6 +597,13 @@ function WebGLLights( extensions, capabilities ) {
 				uniforms.position.setFromMatrixPosition( light.matrixWorld );
 				uniforms.position.applyMatrix4( viewMatrix );
 
+				if ( altCamera ) {
+
+					uniforms.altPosition.setFromMatrixPosition( light.matrixWorld );
+					uniforms.altPosition.applyMatrix4( altMatrix );
+
+				}
+
 				pointLength ++;
 
 			} else if ( light.isHemisphereLight ) {
@@ -569,6 +612,13 @@ function WebGLLights( extensions, capabilities ) {
 
 				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
 				uniforms.direction.transformDirection( viewMatrix );
+
+				if ( altCamera ) {
+
+					uniforms.altDirection.setFromMatrixPosition( light.matrixWorld );
+					uniforms.altDirection.transformDirection( altMatrix );
+
+				}
 
 				hemiLength ++;
 

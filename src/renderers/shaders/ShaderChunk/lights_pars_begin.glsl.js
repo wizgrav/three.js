@@ -95,6 +95,9 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 	struct DirectionalLight {
 		vec3 direction;
 		vec3 color;
+		#ifdef USE_OVR_MULTIVIEW
+			vec3 altDirection;
+		#endif
 	};
 
 	uniform DirectionalLight directionalLights[ NUM_DIR_LIGHTS ];
@@ -102,7 +105,7 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 	void getDirectionalLightInfo( const in DirectionalLight directionalLight, out IncidentLight light ) {
 
 		light.color = directionalLight.color;
-		light.direction = directionalLight.direction;
+		light.direction = getLightDirection(directionalLight);
 		light.visible = true;
 
 	}
@@ -117,6 +120,9 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 		vec3 color;
 		float distance;
 		float decay;
+		#ifdef USE_OVR_MULTIVIEW
+			vec3 altPosition;
+		#endif
 	};
 
 	uniform PointLight pointLights[ NUM_POINT_LIGHTS ];
@@ -124,7 +130,7 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 	// light is an out parameter as having it as a return value caused compiler errors on some devices
 	void getPointLightInfo( const in PointLight pointLight, const in vec3 geometryPosition, out IncidentLight light ) {
 
-		vec3 lVector = pointLight.position - geometryPosition;
+		vec3 lVector = getLightPosition(pointLight) - geometryPosition;
 
 		light.direction = normalize( lVector );
 
@@ -149,6 +155,10 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 		float decay;
 		float coneCos;
 		float penumbraCos;
+		#ifdef USE_OVR_MULTIVIEW
+			vec3 altPosition;
+			vec3 altDirection;
+		#endif
 	};
 
 	uniform SpotLight spotLights[ NUM_SPOT_LIGHTS ];
@@ -156,11 +166,11 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 	// light is an out parameter as having it as a return value caused compiler errors on some devices
 	void getSpotLightInfo( const in SpotLight spotLight, const in vec3 geometryPosition, out IncidentLight light ) {
 
-		vec3 lVector = spotLight.position - geometryPosition;
+		vec3 lVector = getLightPosition(spotLight) - geometryPosition;
 
 		light.direction = normalize( lVector );
 
-		float angleCos = dot( light.direction, spotLight.direction );
+		float angleCos = dot( light.direction, getLightDirection(spotLight) );
 
 		float spotAttenuation = getSpotAttenuation( spotLight.coneCos, spotLight.penumbraCos, angleCos );
 
@@ -191,6 +201,9 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 		vec3 position;
 		vec3 halfWidth;
 		vec3 halfHeight;
+		#ifdef USE_OVR_MULTIVIEW
+			vec3 altPosition;
+		#endif
 	};
 
 	// Pre-computed values of LinearTransformedCosine approximation of BRDF
@@ -209,13 +222,16 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 		vec3 direction;
 		vec3 skyColor;
 		vec3 groundColor;
+		#ifdef USE_OVR_MULTIVIEW
+			vec3 altDirection;
+		#endif
 	};
 
 	uniform HemisphereLight hemisphereLights[ NUM_HEMI_LIGHTS ];
 
 	vec3 getHemisphereLightIrradiance( const in HemisphereLight hemiLight, const in vec3 normal ) {
 
-		float dotNL = dot( normal, hemiLight.direction );
+		float dotNL = dot( normal, getLightDirection(hemiLight) );
 		float hemiDiffuseWeight = 0.5 * dotNL + 0.5;
 
 		vec3 irradiance = mix( hemiLight.groundColor, hemiLight.skyColor, hemiDiffuseWeight );
@@ -223,6 +239,20 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 		return irradiance;
 
 	}
+
+#endif
+
+#ifdef USE_OVR_MULTIVIEW
+
+	#define getLightPosition(t) (gl_ViewID_OVR == 0u ? t.position : t.altPosition)
+
+	#define getLightDirection(t) (gl_ViewID_OVR == 0u ? t.direction : t.altDirection)
+
+#else
+
+	#define getLightPosition(t) (t.position)
+
+	#define getLightDirection(t) (t.direction)
 
 #endif
 `;

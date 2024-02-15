@@ -254,6 +254,8 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 
 			combine: material.combine,
 
+			isMultiview: renderer.getRenderTarget() !== null && renderer.getRenderTarget().multiview === true,
+
 			//
 
 			mapUv: HAS_MAP && getChannel( material.map.channel ),
@@ -563,6 +565,8 @@ function WebGLPrograms( renderer, cubemaps, cubeuvmaps, extensions, capabilities
 			_programLayers.enable( 19 );
 		if ( parameters.alphaToCoverage )
 			_programLayers.enable( 20 );
+		if ( parameters.isMultiview )
+			_programLayers.enable( 21 );
 
 		array.push( _programLayers.mask );
 

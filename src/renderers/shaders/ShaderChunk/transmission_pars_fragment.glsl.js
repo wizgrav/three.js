@@ -169,14 +169,14 @@ export default /* glsl */`
 
 	vec4 getIBLVolumeRefraction( const in vec3 n, const in vec3 v, const in float roughness, const in vec3 diffuseColor,
 		const in vec3 specularColor, const in float specularF90, const in vec3 position, const in mat4 modelMatrix,
-		const in mat4 viewMatrix, const in mat4 projMatrix, const in float ior, const in float thickness,
+		const in mat4 vwMatrix, const in mat4 projMatrix, const in float ior, const in float thickness,
 		const in vec3 attenuationColor, const in float attenuationDistance ) {
 
 		vec3 transmissionRay = getVolumeTransmissionRay( n, v, thickness, ior, modelMatrix );
 		vec3 refractedRayExit = position + transmissionRay;
 
 		// Project refracted vector on the framebuffer, while mapping to normalized device coordinates.
-		vec4 ndcPos = projMatrix * viewMatrix * vec4( refractedRayExit, 1.0 );
+		vec4 ndcPos = projMatrix * vwMatrix * vec4( refractedRayExit, 1.0 );
 		vec2 refractionCoords = ndcPos.xy / ndcPos.w;
 		refractionCoords += 1.0;
 		refractionCoords /= 2.0;
@@ -190,7 +190,7 @@ export default /* glsl */`
 		// Get the specular component.
 		vec3 F = EnvironmentBRDF( n, v, specularColor, specularF90, roughness );
 
-		// As less light is transmitted, the opacity should be increased. This simple approximation does a decent job 
+		// As less light is transmitted, the opacity should be increased. This simple approximation does a decent job
 		// of modulating a CSS background, and has no effect when the buffer is opaque, due to a solid object or clear color.
 		float transmittanceFactor = ( transmittance.r + transmittance.g + transmittance.b ) / 3.0;
 

@@ -25,6 +25,7 @@ import {
 } from '../constants.js';
 import { Color } from '../math/Color.js';
 import { Frustum } from '../math/Frustum.js';
+import { Matrix3 } from '../math/Matrix3.js';
 import { Matrix4 } from '../math/Matrix4.js';
 import { Vector2 } from '../math/Vector2.js';
 import { Vector3 } from '../math/Vector3.js';
@@ -152,6 +153,8 @@ class WebGLRenderer {
 		this.toneMapping = NoToneMapping;
 		this.toneMappingExposure = 1.0;
 
+		this._multiview = parameters.multiview === true;
+
 		// internal properties
 
 		const _this = this;
@@ -195,6 +198,9 @@ class WebGLRenderer {
 
 		let _clippingEnabled = false;
 		let _localClippingEnabled = false;
+
+		const _mat4 = [ new Matrix4(), new Matrix4() ];
+		const _mat3 = [ new Matrix3(), new Matrix3() ];
 
 		// transmission
 
@@ -1217,7 +1223,9 @@ class WebGLRenderer {
 
 			currentRenderState.setupLights( _this._useLegacyLights );
 
-			if ( camera.isArrayCamera ) {
+			const useMultiplePasses = camera.isArrayCamera && ( ( _currentRenderTarget === null ) || ! _currentRenderTarget.multiview );
+
+			if ( useMultiplePasses ) {
 
 				const cameras = camera.cameras;
 
@@ -1753,6 +1761,7 @@ class WebGLRenderer {
 			const morphTargets = !! geometry.morphAttributes.position;
 			const morphNormals = !! geometry.morphAttributes.normal;
 			const morphColors = !! geometry.morphAttributes.color;
+			const isMultiview = ( _currentRenderTarget !== null ) && _currentRenderTarget.multiview;
 
 			let toneMapping = NoToneMapping;
 
@@ -1877,6 +1886,10 @@ class WebGLRenderer {
 
 					needsProgramChange = true;
 
+				} else if ( materialProperties.currentProgram.multiview !== isMultiview ) {
+
+					needsProgramChange = true;
+
 				} else if ( materialProperties.toneMapping !== toneMapping ) {
 
 					needsProgramChange = true;
@@ -1931,8 +1944,32 @@ class WebGLRenderer {
 
 				// common camera uniforms
 
-				p_uniforms.setValue( _gl, 'projectionMatrix', camera.projectionMatrix );
-				p_uniforms.setValue( _gl, 'viewMatrix', camera.matrixWorldInverse );
+				if ( program.multiview ) {
+
+					const cameras = camera.cameras;
+
+					for ( var i = 0; i < cameras.length; i ++ ) {
+
+						_mat4[ i ].copy( cameras[ i ].projectionMatrix );
+
+					}
+
+					p_uniforms.setValue( _gl, 'projectionMatrices', _mat4 );
+
+					for ( var i = 0; i < cameras.length; i ++ ) {
+
+						_mat4[ i ].copy( cameras[ i ].matrixWorldInverse );
+
+					}
+
+					p_uniforms.setValue( _gl, 'viewMatrices', _mat4 );
+
+				} else {
+
+					p_uniforms.setValue( _gl, 'projectionMatrix', camera.projectionMatrix );
+					p_uniforms.setValue( _gl, 'viewMatrix', camera.matrixWorldInverse );
+
+				}
 
 				const uCamPos = p_uniforms.map.cameraPosition;
 
@@ -2086,8 +2123,27 @@ class WebGLRenderer {
 
 			// common matrices
 
-			p_uniforms.setValue( _gl, 'modelViewMatrix', object.modelViewMatrix );
-			p_uniforms.setValue( _gl, 'normalMatrix', object.normalMatrix );
+			if ( program.multiview ) {
+
+				const cameras = camera.cameras;
+
+				for ( var i = 0; i < cameras.length; i ++ ) {
+
+					_mat4[ i ].multiplyMatrices( cameras[ i ].matrixWorldInverse, object.matrixWorld );
+					_mat3[ i ].getNormalMatrix( _mat4[ i ] );
+
+				}
+
+				p_uniforms.setValue( _gl, 'modelViewMatrices', _mat4 );
+				p_uniforms.setValue( _gl, 'normalMatrices', _mat3 );
+
+			} else {
+
+				p_uniforms.setValue( _gl, 'modelViewMatrix', object.modelViewMatrix );
+				p_uniforms.setValue( _gl, 'normalMatrix', object.normalMatrix );
+
+			}
+
 			p_uniforms.setValue( _gl, 'modelMatrix', object.matrixWorld );
 
 			// UBOs
@@ -2171,16 +2227,13 @@ class WebGLRenderer {
 			const renderTargetProperties = properties.get( renderTarget );
 			renderTargetProperties.__hasExternalTextures = true;
 
-			renderTargetProperties.__autoAllocateDepthBuffer = depthTexture === undefined;
+			if ( renderTargetProperties.__hasExternalTextures ) {
 
-			if ( ! renderTargetProperties.__autoAllocateDepthBuffer ) {
+				renderTargetProperties.__autoAllocateDepthBuffer = depthTexture === undefined;
 
-				// The multisample_render_to_texture extension doesn't work properly if there
-				// are midframe flushes and an external depth buffer. Disable use of the extension.
-				if ( extensions.has( 'WEBGL_multisampled_render_to_texture' ) === true ) {
+				if ( ! renderTargetProperties.__autoAllocateDepthBuffer && renderTarget.__useRenderToTexture ) {
 
-					console.warn( 'THREE.WebGLRenderer: Render-to-texture extension was disabled because an external texture was provided' );
-					renderTargetProperties.__useRenderToTexture = false;
+					renderTargetProperties.__useRenderToTexture = extensions.has( 'WEBGL_multisampled_render_to_texture' ) && ! renderTarget.multiview;
 
 				}
 
@@ -2252,7 +2305,7 @@ class WebGLRenderer {
 
 					isCube = true;
 
-				} else if ( ( capabilities.isWebGL2 && renderTarget.samples > 0 ) && textures.useMultisampledRTT( renderTarget ) === false ) {
+				} else if ( ( capabilities.isWebGL2 && renderTarget.samples > 0 ) && textures.useMultisampledRTT( renderTarget ) === false && renderTarget.multiview === false ) {
 
 					framebuffer = properties.get( renderTarget ).__webglMultisampledFramebuffer;
 
@@ -2560,6 +2613,12 @@ class WebGLRenderer {
 	get coordinateSystem() {
 
 		return WebGLCoordinateSystem;
+
+	}
+
+	get multiview() {
+
+		return ( this._multiview === true ) && this.extensions.has( 'OVR_multiview2' );
 
 	}
 

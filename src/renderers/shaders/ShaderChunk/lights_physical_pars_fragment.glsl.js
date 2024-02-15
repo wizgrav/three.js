@@ -350,7 +350,7 @@ vec3 BRDF_Sheen( const in vec3 lightDir, const in vec3 viewDir, const in vec3 no
 
 #endif
 
-// This is a curve-fit approxmation to the "Charlie sheen" BRDF integrated over the hemisphere from 
+// This is a curve-fit approxmation to the "Charlie sheen" BRDF integrated over the hemisphere from
 // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF". The analysis can be found
 // in the Sheen section of https://drive.google.com/file/d/1T0D1VSyR4AllqIJTQAraEIzjlb5h4FKH/view?usp=sharing
 float IBLSheenBRDF( const in vec3 normal, const in vec3 viewDir, const in float roughness ) {
@@ -440,7 +440,7 @@ void computeMultiscattering( const in vec3 normal, const in vec3 viewDir, const 
 		vec3 normal = geometryNormal;
 		vec3 viewDir = geometryViewDir;
 		vec3 position = geometryPosition;
-		vec3 lightPos = rectAreaLight.position;
+		vec3 lightPos = getLightPosition(rectAreaLight);
 		vec3 halfWidth = rectAreaLight.halfWidth;
 		vec3 halfHeight = rectAreaLight.halfHeight;
 		vec3 lightColor = rectAreaLight.color;

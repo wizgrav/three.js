@@ -324,7 +324,8 @@ class WebXRManager extends EventDispatcher {
 					const projectionlayerInit = {
 						colorFormat: gl.RGBA8,
 						depthFormat: glDepthFormat,
-						scaleFactor: framebufferScaleFactor
+						scaleFactor: framebufferScaleFactor,
+						textureType: renderer.multiview ? 'texture-array' : 'texture'
 					};
 
 					glBinding = new XRWebGLBinding( session, gl );
@@ -345,7 +346,8 @@ class WebXRManager extends EventDispatcher {
 							depthTexture: new DepthTexture( glProjLayer.textureWidth, glProjLayer.textureHeight, depthType, undefined, undefined, undefined, undefined, undefined, undefined, depthFormat ),
 							stencilBuffer: attributes.stencil,
 							colorSpace: renderer.outputColorSpace,
-							samples: attributes.antialias ? 4 : 0
+							samples: attributes.antialias ? 4 : 0,
+							multiview: renderer.multiview
 						} );
 
 					const renderTargetProperties = renderer.properties.get( newRenderTarget );
@@ -718,7 +720,7 @@ class WebXRManager extends EventDispatcher {
 							renderer.setRenderTargetTextures(
 								newRenderTarget,
 								glSubImage.colorTexture,
-								glProjLayer.ignoreDepthValues ? undefined : glSubImage.depthStencilTexture );
+								( glProjLayer.ignoreDepthValues && ! renderer.multiview ) ? undefined : glSubImage.depthStencilTexture );
 
 							renderer.setRenderTarget( newRenderTarget );
 

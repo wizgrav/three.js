@@ -36,6 +36,7 @@ class RenderTarget extends EventDispatcher {
 			stencilBuffer: false,
 			depthTexture: null,
 			samples: 0,
+			multiview: false,
 			count: 1
 		}, options );
 
@@ -61,6 +62,8 @@ class RenderTarget extends EventDispatcher {
 		this.depthTexture = options.depthTexture;
 
 		this.samples = options.samples;
+
+		this.multiview = options.multiview;
 
 	}
 
@@ -112,6 +115,8 @@ class RenderTarget extends EventDispatcher {
 		this.width = source.width;
 		this.height = source.height;
 		this.depth = source.depth;
+
+		this.multiview = source.multiview;
 
 		this.scissor.copy( source.scissor );
 		this.scissorTest = source.scissorTest;

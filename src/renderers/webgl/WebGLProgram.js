@@ -495,6 +495,9 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 
 	const customVertexExtensions = generateVertexExtensions( parameters );
 
+	const multiviewExtension = parameters.isMultiview ? '#extension GL_OVR_multiview : require\nlayout(num_views = 2) in;' : '';
+	const fragMultiviewExtension = parameters.isMultiview ? '#extension GL_OVR_multiview : require' : '';
+
 	const customDefines = generateDefines( defines );
 
 	const program = gl.createProgram();
@@ -664,10 +667,28 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 			( parameters.logarithmicDepthBuffer && parameters.rendererExtensionFragDepth ) ? '#define USE_LOGDEPTHBUF_EXT' : '',
 
 			'uniform mat4 modelMatrix;',
-			'uniform mat4 modelViewMatrix;',
-			'uniform mat4 projectionMatrix;',
-			'uniform mat4 viewMatrix;',
-			'uniform mat3 normalMatrix;',
+			parameters.isMultiview ? [
+
+				'uniform mat4 modelViewMatrices[2];',
+				'uniform mat3 normalMatrices[2];',
+				'uniform mat4 viewMatrices[2];',
+				'uniform mat4 projectionMatrices[2];',
+
+				'#define modelViewMatrix modelViewMatrices[gl_ViewID_OVR]',
+				'#define normalMatrix normalMatrices[gl_ViewID_OVR]',
+				'#define viewMatrix viewMatrices[gl_ViewID_OVR]',
+				'#define projectionMatrix projectionMatrices[gl_ViewID_OVR]',
+				'#define USE_OVR_MULTIVIEW'
+
+			].join( '\n' ) : [
+
+				'uniform mat4 modelViewMatrix;',
+				'uniform mat4 projectionMatrix;',
+				'uniform mat4 viewMatrix;',
+				'uniform mat3 normalMatrix;',
+
+			].join( '\n' ),
+
 			'uniform vec3 cameraPosition;',
 			'uniform bool isOrthographic;',
 
@@ -856,7 +877,17 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 			parameters.logarithmicDepthBuffer ? '#define USE_LOGDEPTHBUF' : '',
 			( parameters.logarithmicDepthBuffer && parameters.rendererExtensionFragDepth ) ? '#define USE_LOGDEPTHBUF_EXT' : '',
 
-			'uniform mat4 viewMatrix;',
+			parameters.isMultiview ? [
+
+				'uniform mat4 viewMatrices[2];',
+				'#define viewMatrix viewMatrices[gl_ViewID_OVR]'
+
+			].join( '\n' ) : [
+
+				'uniform mat4 viewMatrix;',
+
+			].join( '\n' ),
+
 			'uniform vec3 cameraPosition;',
 			'uniform bool isOrthographic;',
 
@@ -897,6 +928,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 
 		prefixVertex = [
 			customVertexExtensions,
+			multiviewExtension,
 			'precision mediump sampler2DArray;',
 			'#define attribute in',
 			'#define varying out',
@@ -904,6 +936,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 		].join( '\n' ) + '\n' + prefixVertex;
 
 		prefixFragment = [
+			fragMultiviewExtension,
 			'precision mediump sampler2DArray;',
 			'#define varying in',
 			( parameters.glslVersion === GLSL3 ) ? '' : 'layout(location = 0) out highp vec4 pc_fragColor;',
@@ -1112,6 +1145,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 	this.program = program;
 	this.vertexShader = glVertexShader;
 	this.fragmentShader = glFragmentShader;
+	this.multiview = parameters.isMultiview;
 
 	return this;
 
