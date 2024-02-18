@@ -1,4 +1,4 @@
-import { FloatType } from '../../constants.js';
+import { FloatType, RedFormat } from '../../constants.js';
 import { DataArrayTexture } from '../../textures/DataArrayTexture.js';
 import { Vector4 } from '../../math/Vector4.js';
 import { Vector2 } from '../../math/Vector2.js';
@@ -33,29 +33,32 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 
 			let vertexDataCount = 0;
 
-			if ( hasMorphPosition === true ) vertexDataCount = 1;
-			if ( hasMorphNormals === true ) vertexDataCount = 2;
-			if ( hasMorphColors === true ) vertexDataCount = 3;
+			if ( hasMorphPosition === true ) vertexDataCount = 3;
+			if ( hasMorphNormals === true ) vertexDataCount = 6;
+			if ( hasMorphColors === true ) vertexDataCount = 10;
 
 			let width = geometry.attributes.position.count * vertexDataCount;
 			let height = 1;
 
 			if ( width > capabilities.maxTextureSize ) {
 
-				height = Math.ceil( width / capabilities.maxTextureSize );
-				width = capabilities.maxTextureSize;
+				// Align width on stride to simplify the texel fetching in the shader
+				const strideWidth = Math.floor( capabilities.maxTextureSize / vertexDataCount ) * vertexDataCount;
+				height = Math.ceil( width / strideWidth );
+				width = strideWidth;
 
 			}
 
-			const buffer = new Float32Array( width * height * 4 * morphTargetsCount );
+			const buffer = new Float32Array( width * height * morphTargetsCount );
 
 			const texture = new DataArrayTexture( buffer, width, height, morphTargetsCount );
 			texture.type = FloatType;
+			texture.format = RedFormat;
 			texture.needsUpdate = true;
 
 			// fill buffer
 
-			const vertexDataStride = vertexDataCount * 4;
+			const vertexDataStride = vertexDataCount;
 
 			for ( let i = 0; i < morphTargetsCount; i ++ ) {
 
@@ -76,7 +79,6 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 						buffer[ offset + stride + 0 ] = morph.x;
 						buffer[ offset + stride + 1 ] = morph.y;
 						buffer[ offset + stride + 2 ] = morph.z;
-						buffer[ offset + stride + 3 ] = 0;
 
 					}
 
@@ -84,10 +86,9 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 
 						morph.fromBufferAttribute( morphNormal, j );
 
-						buffer[ offset + stride + 4 ] = morph.x;
-						buffer[ offset + stride + 5 ] = morph.y;
-						buffer[ offset + stride + 6 ] = morph.z;
-						buffer[ offset + stride + 7 ] = 0;
+						buffer[ offset + stride + 3 ] = morph.x;
+						buffer[ offset + stride + 4 ] = morph.y;
+						buffer[ offset + stride + 5 ] = morph.z;
 
 					}
 
@@ -95,10 +96,10 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 
 						morph.fromBufferAttribute( morphColor, j );
 
-						buffer[ offset + stride + 8 ] = morph.x;
-						buffer[ offset + stride + 9 ] = morph.y;
-						buffer[ offset + stride + 10 ] = morph.z;
-						buffer[ offset + stride + 11 ] = ( morphColor.itemSize === 4 ) ? morph.w : 1;
+						buffer[ offset + stride + 6 ] = morph.x;
+						buffer[ offset + stride + 7 ] = morph.y;
+						buffer[ offset + stride + 8 ] = morph.z;
+						buffer[ offset + stride + 9 ] = ( morphColor.itemSize === 4 ) ? morph.w : 1;
 
 					}
 
