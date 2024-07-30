@@ -66,7 +66,7 @@ function WebGLMorphtargets( gl, capabilities, textures ) {
 				const morphNormal = morphNormals[ i ];
 				const morphColor = morphColors[ i ];
 
-				const offset = width * height * 4 * i;
+				const offset = width * height * i;
 
 				for ( let j = 0; j < morphTarget.count; j ++ ) {
 

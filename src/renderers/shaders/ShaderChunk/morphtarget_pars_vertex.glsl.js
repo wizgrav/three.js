@@ -56,7 +56,7 @@ export default /* glsl */`
 
 		#endif
 
-	#endif
+
 
 #endif
 `;
